@@ -1,0 +1,33 @@
+[gd_scene load_steps=4 format=3 uid="uid://blh6mudskpeig"]
+
+[ext_resource type="Script" uid="uid://q2uv3x8wvhid" path="res://player/player.gd" id="1_4flbx"]
+
+[sub_resource type="SceneReplicationConfig" id="SceneReplicationConfig_oul6g"]
+properties/0/path = NodePath(".:position")
+properties/0/spawn = true
+properties/0/replication_mode = 1
+
+[sub_resource type="CapsuleShape3D" id="CapsuleShape3D_drvgu"]
+height = 2.82492
+
+[node name="Player" type="CharacterBody3D"]
+script = ExtResource("1_4flbx")
+
+[node name="MultiplayerSynchronizer" type="MultiplayerSynchronizer" parent="."]
+replication_config = SubResource("SceneReplicationConfig_oul6g")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="."]
+shape = SubResource("CapsuleShape3D_drvgu")
+
+[node name="CSGCylinder3D" type="CSGCylinder3D" parent="."]
+
+[node name="CSGCylinder3D2" type="CSGCylinder3D" parent="."]
+transform = Transform3D(0.375943, 0, 0, 0, -1.99842e-08, 0.45652, 0, -0.457185, -1.99551e-08, 0, 0, -0.729302)
+
+[node name="SpringArm3D" type="SpringArm3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 0.684636, 0.728885, 0, -0.728885, 0.684636, 0, 0, 0)
+spring_length = 3.0
+
+[node name="Camera3D" type="Camera3D" parent="SpringArm3D"]
+unique_name_in_owner = true
+transform = Transform3D(1, 0, 0, 0, 0.935197, -0.354128, 0, 0.354128, 0.935197, 0, -0.414833, 4.26002)
