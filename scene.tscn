@@ -25,11 +25,20 @@ offset_bottom = 40.0
 
 [node name="Join" type="Button" parent="Menu"]
 layout_mode = 2
+disabled = true
 text = "Join"
 
 [node name="Host" type="Button" parent="Menu"]
 layout_mode = 2
 text = "Host"
+
+[node name="Refresh" type="Button" parent="Menu"]
+layout_mode = 2
+text = "Refresh"
+
+[node name="SessionsContainer" type="VBoxContainer" parent="Menu"]
+unique_name_in_owner = true
+layout_mode = 2
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 _spawnable_scenes = PackedStringArray("uid://blh6mudskpeig")
@@ -37,3 +46,4 @@ spawn_path = NodePath("..")
 
 [connection signal="pressed" from="Menu/Join" to="." method="_on_join_pressed"]
 [connection signal="pressed" from="Menu/Host" to="." method="_on_host_pressed"]
+[connection signal="pressed" from="Menu/Refresh" to="." method="get_sessions"]
