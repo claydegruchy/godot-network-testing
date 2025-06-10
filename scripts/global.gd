@@ -1,113 +1,251 @@
 extends Node
 
+# Max number of players.
+const MAX_PEERS: int = 12
 
-var steam_username: String
-var steam_id: int
+var peer: SteamMultiplayerPeer = null
 
-var lobby_members_max := 4
-var lobby_members: Array = []
+# Name for my player.
+signal name_update(new_name)
+var player_name: String = "Nameless":
+	set(n):
+		name_update.emit(n)
+		player_name = n
 
-var lobby_id: int
+# Names for remote players in id:name format.
+var players = {}
 
+var lobby_id := -1
+var host_id := -1
 
-signal connection_state(state)
-signal lobby_list_update(lobbies)
-signal lobby_joined(player_id: int)
+# Signals to let lobby GUI know what's going on.
+signal player_list_changed()
+signal connection_failed()
+signal connection_succeeded()
+signal game_error(what)
 
+# Game state signals to tell the rest of the mechanics whats happening
+signal game_state_update(new_state)
+enum GameState {
+	STARTING,
+	IN_PROGRESS,
+	ENDING,
+	STOPPED,
+}
 
-func _init():
-	print("RUN _init")
-	OS.set_environment("SteamAppId", str(480))
-	OS.set_environment("SteamGameId", str(480))
-
-
-func _ready():
-	print("RUN _ready")
-	var initialize_response: Dictionary = Steam.steamInitEx()
-	print("Did Steam initialize?: %s " % initialize_response)
-	steam_id = Steam.getSteamID()
-	steam_username = Steam.getPersonaName()
-	print("steam_id:", steam_id)
-	print("steam_username:", steam_username)
-
-	print("setting up callbacks...")
-	Steam.lobby_created.connect(_on_lobby_created)
-	Steam.lobby_joined.connect(_on_lobby_joined)
-	Steam.lobby_match_list.connect(_lobby_match_list)
+var previous_game_state: GameState
+var game_state: GameState = GameState.STOPPED:
+	set(gs):
+		if (gs != previous_game_state):
+			game_state = gs
+			game_state_update.emit(gs)
 
 
 func _process(_delta):
 	Steam.run_callbacks()
 
 
-func _create_lobby():
-	print("_create_lobby")
-	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, lobby_members_max)
+# Callback from SceneTree.
+func _player_connected(id):
+	print("_player_connected")
+	# Registration of a client beings here, tell the connected player that we are here.
+	register_player.rpc_id(id, player_name)
 
-func _join_lobby(lobby_id: int, ):
-	print("_join_lobby")
+
+# Callback from SceneTree.
+func _player_disconnected(id):
+	print("_player_disconnected")
+	if game_state == GameState.IN_PROGRESS: # Game is in progress.
+		if multiplayer.is_server(): # If we are the host
+			game_error.emit("Player " + players[id] + " disconnected")
+			
+			end_game()
+	else: # Game is not in progress.
+		# Unregister this player.
+		unregister_player(id)
+
+
+# Callback from SceneTree, only for clients (not server).
+func _connected_ok():
+	print("_connected_ok")
+	# We just connected to a server
+	connection_succeeded.emit()
+
+
+# Callback from SceneTree, only for clients (not server).
+func _server_disconnected():
+	print("_server_disconnected")
+	game_error.emit("Server disconnected")
+	end_game()
+
+
+# Callback from SceneTree, only for clients (not server).
+func _connected_fail():
+	print("_connected_fail")
+	multiplayer.set_network_peer(null) # Remove peer
+	connection_failed.emit()
+
+
+# Lobby management functions.
+@rpc("any_peer")
+func register_player(new_player_name):
+	print("register_player")
+	var id = multiplayer.get_remote_sender_id()
+	players[id] = new_player_name
+	player_list_changed.emit()
+
+
+func unregister_player(id):
+	print("unregister_player")
+	players.erase(id)
+	player_list_changed.emit()
+
+
+@rpc("call_local")
+func load_world():
+	print("load_world")
+	# Change scene.
+	var world = load("res://world.tscn").instantiate()
+	get_tree().get_root().add_child(world)
+	get_tree().get_root().get_node("Lobby").hide()
+
+	# Set up score.
+	world.get_node("Score").add_player(multiplayer.get_unique_id(), player_name)
+	for pn in players:
+		world.get_node("Score").add_player(pn, players[pn])
+	get_tree().set_pause(false) # Unpause and unleash the game!
+
+
+func host_game():
+	print("host_game")
+	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, MAX_PEERS)
+
+
+func join_game(lobby_id):
+	print("join_game", lobby_id)
 	Steam.joinLobby(int(lobby_id))
+
+
+func get_player_list():
+	print("get_player_list")
+	return players.values()
+
+
+func get_player_name():
+	print("get_player_name")
+	return player_name
+
+
+func begin_game():
+	print("begin_game")
+	game_state = GameState.IN_PROGRESS
+	# assert(multiplayer.is_server())
+	# load_world.rpc()
+
+	# var world = get_tree().get_root().get_node("World")
+	# var player_scene = load("res://player.tscn")
+
+	# # Create a dictionary with peer id and respective spawn points, could be improved by randomizing.
+	# var spawn_points = {}
+	# spawn_points[1] = 0 # Server in spawn point 0.
+	# var spawn_point_idx = 1
+	# for p in players:
+	# 	spawn_points[p] = spawn_point_idx
+	# 	spawn_point_idx += 1
+
+	# for p_id in spawn_points:
+	# 	var spawn_pos = world.get_node("SpawnPoints/" + str(spawn_points[p_id])).position
+	# 	var player = player_scene.instantiate()
+	# 	player.synced_position = spawn_pos
+	# 	player.name = str(p_id)
+	# 	player.set_player_name(player_name if p_id == multiplayer.get_unique_id() else players[p_id])
+	# 	world.get_node("Players").add_child(player)
+
+
+func end_game():
+	print("end_game")
+	game_state = GameState.ENDING
+	players.clear()
+
+
+func _init():
+	print("_init")
+	OS.set_environment("SteamAppId", str(480))
+	OS.set_environment("SteamGameId", str(480))
+
+func _ready():
+	print("_ready")
+	var initialize_response: Dictionary = Steam.steamInitEx()
+	print("Did Steam initialize?: %s " % initialize_response)
 	
-func _on_lobby_created(_connect: int, this_lobby_id: int):
-	print("_on_lobby_created")
-	if _connect:
-		lobby_id = this_lobby_id
-		Steam.setLobbyData(lobby_id, "name", steam_username + "'s lobby")
-		Steam.setLobbyJoinable(lobby_id, true)
-		create_multiplayer_socket()
+
+	multiplayer.peer_connected.connect(self._player_connected)
+	multiplayer.peer_disconnected.connect(self._player_disconnected)
+	multiplayer.connected_to_server.connect(self._connected_ok)
+	multiplayer.connection_failed.connect(self._connected_fail)
+	multiplayer.server_disconnected.connect(self._server_disconnected)
+	Steam.lobby_joined.connect(_on_lobby_joined)
+	Steam.lobby_created.connect(_on_lobby_created)
+	await get_tree().process_frame # delay this call to the next frame as its async
+	var steam_username = Steam.getPersonaName()
+	if steam_username:
+		player_name = steam_username
+
+
+func _on_lobby_created(_connect: int, _lobby_id: int):
+	print("_on_lobby_created", _connect)
+	if _connect == 1:
+		lobby_id = _lobby_id
+		Steam.setLobbyData(_lobby_id, "name", "test_server")
+		create_socket()
 		print("Create lobby id:", str(lobby_id))
+		game_state = GameState.STARTING
+	else:
+		print("Error on create lobby!")
 
 
-func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int):
-	print("_on_lobby_joined", response, ",", lobby, ",", _permissions, ",", _locked, )
-	if response == Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
+func _on_lobby_joined(lobby: int, permissions: int, locked: bool, response: int):
+	print("_on_lobby_joined")
+	if response == 1:
 		var id = Steam.getLobbyOwner(lobby)
 		if id != Steam.getSteamID():
-			connect_multiplayer_socket(id)
-			lobby_joined.emit(steam_id)
-		lobby_id = id
+			connect_socket(id)
 	else:
 		# Get the failure reason
-		var fail_reason: String
-
+		var FAIL_REASON: String
 		match response:
-				Steam.CHAT_ROOM_ENTER_RESPONSE_DOESNT_EXIST: fail_reason = "This lobby no longer exists."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_NOT_ALLOWED: fail_reason = "You don't have permission to join this lobby."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_FULL: fail_reason = "The lobby is now full."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_ERROR: fail_reason = "Uh... something unexpected happened!"
-				Steam.CHAT_ROOM_ENTER_RESPONSE_BANNED: fail_reason = "You are banned from this lobby."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_LIMITED: fail_reason = "You cannot join due to having a limited account."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_CLAN_DISABLED: fail_reason = "This lobby is locked or disabled."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_COMMUNITY_BAN: fail_reason = "This lobby is community locked."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_MEMBER_BLOCKED_YOU: fail_reason = "A user in the lobby has blocked you from joining."
-				Steam.CHAT_ROOM_ENTER_RESPONSE_YOU_BLOCKED_MEMBER: fail_reason = "A user you have blocked is in the lobby."
+			2: FAIL_REASON = "This lobby no longer exists."
+			3: FAIL_REASON = "You don't have permission to join this lobby."
+			4: FAIL_REASON = "The lobby is now full."
+			5: FAIL_REASON = "Uh... something unexpected happened!"
+			6: FAIL_REASON = "You are banned from this lobby."
+			7: FAIL_REASON = "You cannot join due to having a limited account."
+			8: FAIL_REASON = "This lobby is locked or disabled."
+			9: FAIL_REASON = "This lobby is community locked."
+			10: FAIL_REASON = "A user in the lobby has blocked you from joining."
+			11: FAIL_REASON = "A user you have blocked is in the lobby."
+		print(FAIL_REASON)
 
-		print("Failed to join this chat room: %s" % fail_reason)
 
-
-func create_multiplayer_socket():
-	print("create_multiplayer_socket")
-	var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
-
+func create_socket():
+	print("create_socket")
+	peer = SteamMultiplayerPeer.new()
 	# Example of peer config
 	#peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
-	var error = peer.create_host(0)
-	if error != OK:
-		print("ERROR")
-		print(error)
-	multiplayer.multiplayer_peer = peer
+	peer.create_host(0)
+	multiplayer.set_multiplayer_peer(peer)
 
 
-func connect_multiplayer_socket(steam_id: int):
-	print("connect_multiplayer_socket")
-	var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
-
+func connect_socket(steam_id: int):
+	print("connect_socket")
+	peer = SteamMultiplayerPeer.new()
 	# Example of peer config
 	# peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	peer.create_client(steam_id, 0)
-	multiplayer.multiplayer_peer = peer
+	multiplayer.set_multiplayer_peer(peer)
 
 
+signal lobby_list_update(list: Array)
 func get_lobby_list():
 	print("get_lobby_list")
 	Steam.addRequestLobbyListDistanceFilter(Steam.LOBBY_DISTANCE_FILTER_CLOSE)
