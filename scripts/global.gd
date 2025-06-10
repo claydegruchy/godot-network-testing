@@ -1,6 +1,5 @@
 extends Node
 
-var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
 
 var steam_username: String
 var steam_id: int
@@ -88,6 +87,8 @@ func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: in
 
 func create_multiplayer_socket():
 	print("create_multiplayer_socket")
+	var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
+
 	# Example of peer config
 	#peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	var error = peer.create_host(0)
@@ -99,6 +100,8 @@ func create_multiplayer_socket():
 
 func connect_multiplayer_socket(steam_id: int):
 	print("connect_multiplayer_socket")
+	var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
+
 	# Example of peer config
 	# peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	peer.create_client(steam_id, 0)
