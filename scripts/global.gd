@@ -70,10 +70,10 @@ func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: in
 	print("_on_lobby_joined", response)
 	if response == Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
 		var id = Steam.getLobbyOwner(lobby)
-		# if id != Steam.getSteamID():
-		connect_multiplayer_socket(id)
+		if id != Steam.getSteamID():
+			connect_multiplayer_socket(id)
+			lobby_joined.emit(steam_id)
 		lobby_id = id
-		lobby_joined.emit(steam_id)
 	else:
 		# Get the failure reason
 		var fail_reason: String
