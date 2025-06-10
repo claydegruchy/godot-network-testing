@@ -1,53 +1,12 @@
 extends Node
 
-var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
-
-var steam_username: String
-var steam_id: int
-
-var lobby_members_max := 4
-var lobby_members: Array = []
-
-var lobby_id: int
-
 
 signal connection_state(state)
 signal lobby_list_update(lobbies)
 signal lobby_joined(player_id: int)
 
 
-func _init():
-	print("RUN _init")
-	OS.set_environment("SteamAppId", str(480))
-	OS.set_environment("SteamGameId", str(480))
-
-
 func _ready():
-	print("RUN _ready")
-	var initialize_response: Dictionary = Steam.steamInitEx()
-	print("Did Steam initialize?: %s " % initialize_response)
-	steam_id = Steam.getSteamID()
-	steam_username = Steam.getPersonaName()
-	print("steam_id:", steam_id)
-	print("steam_username:", steam_username)
-
-	print("setting up callbacks...")
-	Steam.lobby_created.connect(_on_lobby_created)
-	Steam.lobby_joined.connect(_on_lobby_joined)
-	Steam.lobby_match_list.connect(_lobby_match_list)
-
-
-	multiplayer.connected_to_server.connect(on_multiplayer_connect)
-
-
-func on_multiplayer_connect(args):
-	print("on_multiplayer_connect")
-	print(args)
-
-func _process(_delta):
-	Steam.run_callbacks()
-
-
 func _create_lobby():
 	print("_create_lobby")
 	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, lobby_members_max)

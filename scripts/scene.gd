@@ -1,5 +1,15 @@
 extends Node3D
 
+var peer: SteamMultiplayerPeer = SteamMultiplayerPeer.new()
+
+var steam_username: String
+var steam_id: int
+
+var lobby_members_max := 4
+var lobby_members: Array = []
+
+var lobby_id: int
+
 
 @onready var menu = $Menu
 
@@ -8,20 +18,28 @@ extends Node3D
 @onready var spawner: MultiplayerSpawner = %MultiplayerSpawner
 @export var player_scene: PackedScene
 
-
+func _init():
+	print("RUN _init")
+	OS.set_environment("SteamAppId", str(480))
+	OS.set_environment("SteamGameId", str(480))
+	
 func _ready():
-	Global.lobby_list_update.connect(update_session_browser)
-	Global.peer.peer_connected.connect(func(id): add_player_character(id))
-	Global.lobby_joined.connect(add_player_character)
+	print("RUN _ready")
+	var initialize_response: Dictionary = Steam.steamInitEx()
+	print("Did Steam initialize?: %s " % initialize_response)
+	steam_id = Steam.getSteamID()
+	steam_username = Steam.getPersonaName()
+	print("steam_id:", steam_id)
+	print("steam_username:", steam_username)
 
+	print("setting up callbacks...")
 
-	pass
-
+func _process(_delta):
+	Steam.run_callbacks()
 
 func _on_host_pressed():
 	print("_on_host_pressed")
-	Global._create_lobby()
-	add_player_character()
+	peer.create_host(
 
 func _on_join_pressed(lobby_id, player_id):
 	print(lobby_id, "-", player_id)
