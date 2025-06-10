@@ -13,6 +13,7 @@ var lobby_id: int
 
 signal connection_state(state)
 signal lobby_list_update(lobbies)
+signal lobby_joined(player_id: int)
 
 
 func _init():
@@ -65,13 +66,31 @@ func _on_lobby_created(_connect: int, this_lobby_id: int):
 		print("Create lobby id:", str(lobby_id))
 
 
-func _on_lobby_joined(lobby: int, permissions: int, locked: bool, response: int):
-	print("_on_lobby_joined")
-	if response == 1:
+func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int):
+	print("_on_lobby_joined", response)
+	if response == Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
 		var id = Steam.getLobbyOwner(lobby)
-		if id != Steam.getSteamID():
-			connect_multiplayer_socket(id)
+		# if id != Steam.getSteamID():
+		connect_multiplayer_socket(id)
 		lobby_id = id
+		lobby_joined.emit(steam_id)
+	else:
+		# Get the failure reason
+		var fail_reason: String
+
+		match response:
+				Steam.CHAT_ROOM_ENTER_RESPONSE_DOESNT_EXIST: fail_reason = "This lobby no longer exists."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_NOT_ALLOWED: fail_reason = "You don't have permission to join this lobby."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_FULL: fail_reason = "The lobby is now full."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_ERROR: fail_reason = "Uh... something unexpected happened!"
+				Steam.CHAT_ROOM_ENTER_RESPONSE_BANNED: fail_reason = "You are banned from this lobby."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_LIMITED: fail_reason = "You cannot join due to having a limited account."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_CLAN_DISABLED: fail_reason = "This lobby is locked or disabled."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_COMMUNITY_BAN: fail_reason = "This lobby is community locked."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_MEMBER_BLOCKED_YOU: fail_reason = "A user in the lobby has blocked you from joining."
+				Steam.CHAT_ROOM_ENTER_RESPONSE_YOU_BLOCKED_MEMBER: fail_reason = "A user you have blocked is in the lobby."
+
+		print("Failed to join this chat room: %s" % fail_reason)
 
 
 func create_multiplayer_socket():

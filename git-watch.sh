@@ -1,0 +1,1 @@
+ ./git-repo-watcher.sh -d . -h git-repo-watcher-hooks.sh

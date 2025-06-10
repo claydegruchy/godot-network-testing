@@ -1,7 +1,8 @@
-[gd_scene load_steps=4 format=3 uid="uid://bceji31cyblec"]
+[gd_scene load_steps=5 format=3 uid="uid://bceji31cyblec"]
 
 [ext_resource type="Script" uid="uid://dutk0mp6uw4de" path="res://scripts/scene.gd" id="1_3253y"]
 [ext_resource type="Texture2D" uid="uid://bo3tm45ptj5kc" path="res://icon.svg" id="1_nxogm"]
+[ext_resource type="PackedScene" uid="uid://blh6mudskpeig" path="res://player/player.tscn" id="3_3253y"]
 
 [sub_resource type="StandardMaterial3D" id="StandardMaterial3D_3253y"]
 metallic = 1.0
@@ -9,6 +10,7 @@ metallic_texture = ExtResource("1_nxogm")
 
 [node name="Node3D" type="Node3D"]
 script = ExtResource("1_3253y")
+player_scene = ExtResource("3_3253y")
 
 [node name="Ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.99408, -12.5137, 0)
@@ -41,6 +43,7 @@ unique_name_in_owner = true
 layout_mode = 2
 
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
+unique_name_in_owner = true
 _spawnable_scenes = PackedStringArray("uid://blh6mudskpeig")
 spawn_path = NodePath("..")
 
