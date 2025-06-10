@@ -37,13 +37,6 @@ func _ready():
 	Steam.lobby_match_list.connect(_lobby_match_list)
 
 
-	multiplayer.connected_to_server.connect(on_multiplayer_connect)
-
-
-func on_multiplayer_connect(args):
-	print("on_multiplayer_connect")
-	print(args)
-
 func _process(_delta):
 	Steam.run_callbacks()
 
@@ -67,7 +60,7 @@ func _on_lobby_created(_connect: int, this_lobby_id: int):
 
 
 func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int):
-	print("_on_lobby_joined", response)
+	print("_on_lobby_joined", response, ",", lobby, ",", _permissions, ",", _locked, )
 	if response == Steam.CHAT_ROOM_ENTER_RESPONSE_SUCCESS:
 		var id = Steam.getLobbyOwner(lobby)
 		if id != Steam.getSteamID():
