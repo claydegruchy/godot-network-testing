@@ -7,17 +7,26 @@ extends Node3D
 @export var player_scene: PackedScene
 @export var map_scene: PackedScene
 @onready var sessions_browser: VBoxContainer = %SessionsContainer
+@onready var lobby_status_display: Label = %LobbyStatus
+
 
 func _ready():
+	Global.lobby_list_update.connect(update_session_browser)
 	pass
 
 func _on_host_pressed():
-	return
-func _on_join_pressed(lobby_id, player_id):
-	return
+	Global.host_game()
+
 func get_sessions():
 	print("get_sessions")
 	Global.get_lobby_list()
+	lobby_status_display.text = "Searching for sessions..."
+
+func start_game():
+	return
+	
+func end_game():
+	return
 
 
 # func add_player_character(id = 1):
@@ -32,6 +41,7 @@ func get_sessions():
 
 func update_session_browser(lobbies: Array):
 	print("update_session_browser")
+	lobby_status_display.text = "Found sessions"
 	print(lobbies)
 
 	var children = sessions_browser.get_children()

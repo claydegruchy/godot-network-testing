@@ -38,6 +38,10 @@ text = "Host"
 layout_mode = 2
 text = "Refresh"
 
+[node name="LobbyStatus" type="Label" parent="Menu"]
+unique_name_in_owner = true
+layout_mode = 2
+
 [node name="SessionsContainer" type="VBoxContainer" parent="Menu"]
 unique_name_in_owner = true
 layout_mode = 2
