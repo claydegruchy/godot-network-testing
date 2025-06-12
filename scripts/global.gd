@@ -25,7 +25,7 @@ signal connection_succeeded()
 signal game_error(what)
 
 # Game state signals to tell the rest of the mechanics whats happening
-signal game_state_update(new_state)
+signal networking_state_update(new_state)
 enum GameState {
 	STARTING,
 	IN_PROGRESS,
@@ -33,12 +33,12 @@ enum GameState {
 	STOPPED,
 }
 
-var previous_game_state: GameState
-var game_state: GameState = GameState.STOPPED:
+var previous_networking_state: GameState
+var networking_state: GameState = GameState.STOPPED:
 	set(gs):
-		if (gs != previous_game_state):
-			game_state = gs
-			game_state_update.emit(gs)
+		if (gs != previous_networking_state):
+			networking_state = gs
+			networking_state_update.emit(gs)
 
 
 func _process(_delta):
@@ -55,7 +55,7 @@ func _player_connected(id):
 # Callback from SceneTree.
 func _player_disconnected(id):
 	print("_player_disconnected")
-	if game_state == GameState.IN_PROGRESS: # Game is in progress.
+	if networking_state == GameState.IN_PROGRESS: # Game is in progress.
 		if multiplayer.is_server(): # If we are the host
 			game_error.emit("Player " + players[id] + " disconnected")
 			
@@ -101,21 +101,6 @@ func unregister_player(id):
 	player_list_changed.emit()
 
 
-@rpc("call_local")
-func load_world():
-	print("load_world")
-	# Change scene.
-	var world = load("res://world.tscn").instantiate()
-	get_tree().get_root().add_child(world)
-	get_tree().get_root().get_node("Lobby").hide()
-
-	# Set up score.
-	world.get_node("Score").add_player(multiplayer.get_unique_id(), player_name)
-	for pn in players:
-		world.get_node("Score").add_player(pn, players[pn])
-	get_tree().set_pause(false) # Unpause and unleash the game!
-
-
 func host_game():
 	print("host_game")
 	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, MAX_PEERS)
@@ -138,7 +123,7 @@ func get_player_name():
 
 func begin_game():
 	print("begin_game")
-	game_state = GameState.IN_PROGRESS
+	networking_state = GameState.IN_PROGRESS
 	# assert(multiplayer.is_server())
 	# load_world.rpc()
 
@@ -162,9 +147,23 @@ func begin_game():
 	# 	world.get_node("Players").add_child(player)
 
 
+# @rpc("call_local")
+# func load_world():
+# 	print("load_world")
+# 	# Change scene.
+# 	var world = load("res://world.tscn").instantiate()
+# 	get_tree().get_root().add_child(world)
+# 	get_tree().get_root().get_node("Lobby").hide()
+
+# 	# Set up score.
+# 	world.get_node("Score").add_player(multiplayer.get_unique_id(), player_name)
+# 	for pn in players:
+# 		world.get_node("Score").add_player(pn, players[pn])
+# 	get_tree().set_pause(false) # Unpause and unleash the game!
+
 func end_game():
 	print("end_game")
-	game_state = GameState.ENDING
+	networking_state = GameState.ENDING
 	players.clear()
 
 
@@ -178,7 +177,7 @@ func _ready():
 	var initialize_response: Dictionary = Steam.steamInitEx()
 	print("Did Steam initialize?: %s " % initialize_response)
 	
-
+	print("Connecting siganls")
 	multiplayer.peer_connected.connect(self._player_connected)
 	multiplayer.peer_disconnected.connect(self._player_disconnected)
 	multiplayer.connected_to_server.connect(self._connected_ok)
@@ -186,9 +185,12 @@ func _ready():
 	multiplayer.server_disconnected.connect(self._server_disconnected)
 	Steam.lobby_joined.connect(_on_lobby_joined)
 	Steam.lobby_created.connect(_on_lobby_created)
+	Steam.lobby_match_list.connect(_lobby_match_list)
+	print("Waiting for name...")
 	await get_tree().process_frame # delay this call to the next frame as its async
 	var steam_username = Steam.getPersonaName()
 	if steam_username:
+		print("Set name to " + player_name)
 		player_name = steam_username
 
 
@@ -199,7 +201,7 @@ func _on_lobby_created(_connect: int, _lobby_id: int):
 		Steam.setLobbyData(_lobby_id, "name", "test_server")
 		create_socket()
 		print("Create lobby id:", str(lobby_id))
-		game_state = GameState.STARTING
+		networking_state = GameState.STARTING
 	else:
 		print("Error on create lobby!")
 
@@ -227,6 +229,24 @@ func _on_lobby_joined(lobby: int, permissions: int, locked: bool, response: int)
 		print(FAIL_REASON)
 
 
+signal lobby_list_update(list: Array)
+func get_lobby_list():
+	print("get_lobby_list")
+	Steam.addRequestLobbyListDistanceFilter(Steam.LOBBY_DISTANCE_FILTER_WORLDWIDE)
+	Steam.requestLobbyList()
+
+func _lobby_match_list(lobbies):
+	print("_lobby_match_list")
+	var t = []
+	for lobby in lobbies:
+		var lobby_name = Steam.getLobbyData(lobby, "name")
+		if lobby_name.length() < 1:
+			continue
+		var member_count = Steam.getNumLobbyMembers(lobby)
+		t.append([lobby_name, member_count])
+	lobby_list_update.emit(t)
+
+
 func create_socket():
 	print("create_socket")
 	peer = SteamMultiplayerPeer.new()
@@ -243,21 +263,3 @@ func connect_socket(steam_id: int):
 	# peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	peer.create_client(steam_id, 0)
 	multiplayer.set_multiplayer_peer(peer)
-
-
-signal lobby_list_update(list: Array)
-func get_lobby_list():
-	print("get_lobby_list")
-	Steam.addRequestLobbyListDistanceFilter(Steam.LOBBY_DISTANCE_FILTER_CLOSE)
-	Steam.requestLobbyList()
-
-func _lobby_match_list(lobbies):
-	print("_lobby_match_list")
-	var t = []
-	for lobby in lobbies:
-		var lobby_name = Steam.getLobbyData(lobby, "name")
-		if lobby_name.length() < 1:
-			continue
-		var member_count = Steam.getNumLobbyMembers(lobby)
-		t.append([lobby_name, member_count])
-	lobby_list_update.emit(t)
