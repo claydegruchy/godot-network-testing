@@ -26,7 +26,6 @@ func _on_join_game():
 	print(multiplayer.get_remote_sender_id())
 	if multiplayer.is_server():
 		print("server")
-
 	else:
 		print("client")
 	return
@@ -61,6 +60,6 @@ func update_session_browser(lobbies: Array):
 	for lobby in lobbies:
 		var b = Button.new()
 		b.text = lobby[0]
-		b.pressed.connect(Global.join_game.bind(lobby[1]))
+		b.pressed.connect(Global.join_lobby.bind(lobby[1]))
 		sessions_browser.add_child(b)
 	return
