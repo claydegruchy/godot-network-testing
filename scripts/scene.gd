@@ -16,7 +16,7 @@ func _ready():
 	pass
 
 func _on_host_pressed():
-	Global.host_game()
+	Global.create_lobby()
 
 
 func _on_join_game():
@@ -59,7 +59,8 @@ func update_session_browser(lobbies: Array):
 
 	for lobby in lobbies:
 		var b = Button.new()
-		b.text = lobby[0]
+		b.text = lobby[0] + " - (" + str(lobby[2]) + ")"
 		b.pressed.connect(Global.join_lobby.bind(lobby[1]))
+		b.pressed.connect(func(): print(lobby))
 		sessions_browser.add_child(b)
 	return

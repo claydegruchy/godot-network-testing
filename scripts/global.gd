@@ -114,8 +114,8 @@ func unregister_player(id):
 	player_list_changed.emit()
 
 
-func host_game():
-	print("host_game")
+func create_lobby():
+	print("create_lobby")
 	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, MAX_PEERS)
 
 
@@ -247,13 +247,14 @@ func get_lobby_list():
 
 func _lobby_match_list(lobbies):
 	print("_lobby_match_list")
+	Logging.log(lobbies)
 	var t = []
 	for lobby in lobbies:
 		var lobby_name = Steam.getLobbyData(lobby, "name")
 		if lobby_name.length() < 1:
 			continue
 		var member_count = Steam.getNumLobbyMembers(lobby)
-		t.append([lobby_name, member_count])
+		t.append([lobby_name, lobby, member_count])
 	lobby_list_update.emit(t)
 
 
