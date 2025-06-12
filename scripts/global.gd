@@ -12,16 +12,21 @@ var player_name: String = "Nameless":
 		name_update.emit(n)
 		player_name = n
 
+
 # Names for remote players in id:name format.
 var players = {}
 
 var lobby_id := -1
 var host_id := -1
+var steam_id := -1
+
 
 # Signals to let lobby GUI know what's going on.
 signal player_list_changed()
 signal connection_failed()
 signal connection_succeeded()
+signal socket_update_succeeded()
+signal socket_update_failed(what)
 signal game_error(what)
 
 # Game state signals to tell the rest of the mechanics whats happening
@@ -106,8 +111,8 @@ func host_game():
 	Steam.createLobby(Steam.LOBBY_TYPE_PUBLIC, MAX_PEERS)
 
 
-func join_game(lobby_id):
-	print("join_game", lobby_id)
+func join_lobby(lobby_id):
+	print("join_lobby", lobby_id)
 	Steam.joinLobby(int(lobby_id))
 
 
@@ -116,19 +121,13 @@ func get_player_list():
 	return players.values()
 
 
-func get_player_name():
-	print("get_player_name")
-	return player_name
-
-
 func begin_game():
 	print("begin_game")
-	networking_state = GameState.IN_PROGRESS
 	# assert(multiplayer.is_server())
 	# load_world.rpc()
 
 	# var world = get_tree().get_root().get_node("World")
-	# var player_scene = load("res://player.tscn")
+	var player_scene = load("res://player/player.tscn")
 
 	# # Create a dictionary with peer id and respective spawn points, could be improved by randomizing.
 	# var spawn_points = {}
@@ -163,7 +162,6 @@ func begin_game():
 
 func end_game():
 	print("end_game")
-	networking_state = GameState.ENDING
 	players.clear()
 
 
@@ -183,34 +181,38 @@ func _ready():
 	multiplayer.connected_to_server.connect(self._connected_ok)
 	multiplayer.connection_failed.connect(self._connected_fail)
 	multiplayer.server_disconnected.connect(self._server_disconnected)
+	
 	Steam.lobby_joined.connect(_on_lobby_joined)
 	Steam.lobby_created.connect(_on_lobby_created)
 	Steam.lobby_match_list.connect(_lobby_match_list)
+
 	print("Waiting for name...")
 	await get_tree().process_frame # delay this call to the next frame as its async
 	var steam_username = Steam.getPersonaName()
 	if steam_username:
 		print("Set name to " + player_name)
 		player_name = steam_username
-
+	steam_id = Steam.getSteamID()
+	
 
 func _on_lobby_created(_connect: int, _lobby_id: int):
-	print("_on_lobby_created", _connect)
+	print_debug("_on_lobby_created", _connect)
 	if _connect == 1:
+		print("Create lobby id:", str(lobby_id))
 		lobby_id = _lobby_id
 		Steam.setLobbyData(_lobby_id, "name", "test_server")
 		create_socket()
-		print("Create lobby id:", str(lobby_id))
-		networking_state = GameState.STARTING
+	
 	else:
 		print("Error on create lobby!")
 
 
-func _on_lobby_joined(lobby: int, permissions: int, locked: bool, response: int):
-	print("_on_lobby_joined")
+func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int):
+	print_debug("_on_lobby_joined")
+	print_stack()
 	if response == 1:
 		var id = Steam.getLobbyOwner(lobby)
-		if id != Steam.getSteamID():
+		if id != steam_id:
 			connect_socket(id)
 	else:
 		# Get the failure reason
@@ -252,8 +254,12 @@ func create_socket():
 	peer = SteamMultiplayerPeer.new()
 	# Example of peer config
 	#peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
-	peer.create_host(0)
-	multiplayer.set_multiplayer_peer(peer)
+	var error = peer.create_host(0)
+	if error == OK:
+		multiplayer.set_multiplayer_peer(peer)
+		socket_update_succeeded.emit()
+	else:
+		socket_update_failed.emit(error)
 
 
 func connect_socket(steam_id: int):
@@ -261,5 +267,9 @@ func connect_socket(steam_id: int):
 	peer = SteamMultiplayerPeer.new()
 	# Example of peer config
 	# peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
-	peer.create_client(steam_id, 0)
-	multiplayer.set_multiplayer_peer(peer)
+	var error = peer.create_client(steam_id, 0)
+	if error == OK:
+		multiplayer.set_multiplayer_peer(peer)
+		socket_update_succeeded.emit()
+	else:
+		socket_update_failed.emit(error)

@@ -1,17 +1,16 @@
 extends Node3D
 
 
-@onready var menu = $Menu
-
-
 @export var player_scene: PackedScene
 @export var map_scene: PackedScene
 @onready var sessions_browser: VBoxContainer = %SessionsContainer
+@onready var log_container: VBoxContainer = %LogContainer
 @onready var lobby_status_display: Label = %LobbyStatus
 
 
 func _ready():
 	Global.lobby_list_update.connect(update_session_browser)
+	Global.socket_update_succeeded.connect(_on_join_game)
 	Logging.initate_logger(log_container)
 	Logging.log("lmao")
 	pass
@@ -19,26 +18,35 @@ func _ready():
 func _on_host_pressed():
 	Global.host_game()
 
+
+func _on_join_game():
+	add_player_character(multiplayer.get_unique_id())
+	print(Global.steam_id)
+	print(multiplayer.get_unique_id())
+	print(multiplayer.get_remote_sender_id())
+	if multiplayer.is_server():
+		print("server")
+
+	else:
+		print("client")
+	return
+
 func get_sessions():
 	print("get_sessions")
 	Global.get_lobby_list()
 	lobby_status_display.text = "Searching for sessions..."
 
-func start_game():
-	return
-	
-func end_game():
+
+func spawn():
+	add_player_character(Global.steam_id)
 	return
 
-
-# func add_player_character(id = 1):
-# 	print("add_player_character")
-# 	# spawner.spawn("res://player/player.tscn")
-# 	# character.name = str(id)
-# 	# add_child(character)
-# 	var character = player_scene.instantiate()
-# 	character.name = str(id)
-# 	add_child(character)
+func add_player_character(id: int = 1):
+	print("add_player_character", id)
+	print(Global.players)
+	var character = player_scene.instantiate()
+	character.name = str(id)
+	add_child(character)
 
 
 func update_session_browser(lobbies: Array):
@@ -53,5 +61,6 @@ func update_session_browser(lobbies: Array):
 	for lobby in lobbies:
 		var b = Button.new()
 		b.text = lobby[0]
+		b.pressed.connect(Global.join_game.bind(lobby[1]))
 		sessions_browser.add_child(b)
 	return

@@ -17,8 +17,8 @@ config/icon="res://icon.svg"
 
 [autoload]
 
-Global="*res://scripts/global.gd"
 Logging="*res://scripts/logging.gd"
+Global="*res://scripts/global.gd"
 
 [input]
 
