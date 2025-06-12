@@ -1,5 +1,13 @@
 extends Node
 
+# the purposes of this script is to handle the setup of networking for the rest of the game
+# this doesnt deal with socket conenctions, it simply sets the stage for the 'multiplayer' builtin
+# this lets us use normal multiplayer spawners and syncers instead of dealing with packet sending
+
+# it does this using the steam lobby system, where a lobby is created, then that lobby is joined and used as
+# the socket connection with steam sitting as the match maker
+
+
 # Max number of players.
 const MAX_PEERS: int = 12
 
