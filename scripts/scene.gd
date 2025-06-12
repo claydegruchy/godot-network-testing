@@ -12,6 +12,8 @@ extends Node3D
 
 func _ready():
 	Global.lobby_list_update.connect(update_session_browser)
+	Logging.initate_logger(log_container)
+	Logging.log("lmao")
 	pass
 
 func _on_host_pressed():
