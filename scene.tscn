@@ -35,6 +35,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Menu" type="VBoxContainer" parent="Control"]
+layout_mode = 0
 offset_right = 68.0
 offset_bottom = 132.0
 

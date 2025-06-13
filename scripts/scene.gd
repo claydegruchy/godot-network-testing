@@ -11,8 +11,8 @@ extends Node3D
 func _ready():
 	Global.lobby_list_update.connect(update_session_browser)
 	Global.socket_update_succeeded.connect(_on_join_game)
-	Logging.initate_logger(log_container)
-	Logging.log("lmao")
+	Logger.initate_logger(log_container)
+	Logger.log("lmao")
 	pass
 
 func _on_host_pressed():

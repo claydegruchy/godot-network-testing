@@ -247,7 +247,7 @@ func get_lobby_list():
 
 func _lobby_match_list(lobbies):
 	print("_lobby_match_list")
-	Logging.log(lobbies)
+	Logger.log(lobbies)
 	var t = []
 	for lobby in lobbies:
 		var lobby_name = Steam.getLobbyData(lobby, "name")
