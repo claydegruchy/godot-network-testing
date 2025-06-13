@@ -163,7 +163,9 @@ func _ready():
 	steam_id = Steam.getSteamID()
 
 
-	var args := OS.get_cmdline_user_args()
+	# utilities for testing
+	var args = OS.get_cmdline_args()
+
 	if args.has("--autojoin"):
 		var quick_join = func(l):
 			var lobbies = _lobby_match_list(l)
@@ -171,11 +173,11 @@ func _ready():
 				if lobby[0] == DEFAULT_SERVER_NAME:
 					join_lobby(lobby[1])
 
-
 		Steam.lobby_match_list.connect(quick_join)
 		get_lobby_list()
 
-		return
+	if args.has("--autohost"):
+		create_lobby()
 
 	
 func _on_lobby_created(_connect: int, _lobby_id: int):
