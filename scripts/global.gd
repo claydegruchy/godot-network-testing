@@ -10,6 +10,7 @@ extends Node
 
 # Max number of players.
 const MAX_PEERS: int = 12
+const DEFAULT_SERVER_NAME: String = "test_server_G78VR3"
 
 var peer: SteamMultiplayerPeer = null
 
@@ -96,6 +97,10 @@ func _connected_fail():
 func register_player(new_player_name):
 	print("register_player")
 	var id = multiplayer.get_remote_sender_id()
+	if players.has(id):
+		print("player already in game")
+		game_error.emit("player already in game")
+		return
 	players[id] = new_player_name
 	player_joined.emit(id)
 
@@ -156,14 +161,29 @@ func _ready():
 		player_name = steam_username
 		print("Set name to " + player_name)
 	steam_id = Steam.getSteamID()
-	
 
+
+	var args := OS.get_cmdline_user_args()
+	if args.has("--autojoin"):
+		var quick_join = func(l):
+			var lobbies = _lobby_match_list(l)
+			for lobby in lobbies:
+				if lobby[0] == DEFAULT_SERVER_NAME:
+					join_lobby(lobby[1])
+
+
+		Steam.lobby_match_list.connect(quick_join)
+		get_lobby_list()
+
+		return
+
+	
 func _on_lobby_created(_connect: int, _lobby_id: int):
 	print_debug("_on_lobby_created", _connect)
 	if _connect == 1:
 		print("Create lobby id:", str(lobby_id))
 		lobby_id = _lobby_id
-		Steam.setLobbyData(_lobby_id, "name", "test_server")
+		Steam.setLobbyData(_lobby_id, "name", DEFAULT_SERVER_NAME)
 		create_socket()
 	
 	else:
@@ -202,7 +222,6 @@ func get_lobby_list():
 
 func _lobby_match_list(lobbies):
 	print("_lobby_match_list")
-	Logger.log(lobbies)
 	var t = []
 	for lobby in lobbies:
 		var lobby_name = Steam.getLobbyData(lobby, "name")
@@ -211,6 +230,7 @@ func _lobby_match_list(lobbies):
 		var member_count = Steam.getNumLobbyMembers(lobby)
 		t.append([lobby_name, lobby, member_count])
 	lobby_list_update.emit(t)
+	return t
 
 
 func create_socket():
