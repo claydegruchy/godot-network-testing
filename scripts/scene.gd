@@ -7,10 +7,14 @@ extends Node3D
 @onready var log_container: VBoxContainer = %LogContainer
 @onready var lobby_status_display: Label = %LobbyStatus
 
+@onready var player_container: Node3D = %PlayerContainer
+
 
 func _ready():
 	Global.lobby_list_update.connect(update_session_browser)
 	Global.socket_update_succeeded.connect(_on_join_game)
+	Global.player_joined.connect(on_player_join)
+	Global.player_left.connect(on_player_leave)
 	Logger.initate_logger(log_container)
 	Logger.log("lmao")
 	pass
@@ -20,15 +24,19 @@ func _on_host_pressed():
 
 
 func _on_join_game():
-	add_player_character(multiplayer.get_unique_id())
-	print(Global.steam_id)
-	print(multiplayer.get_unique_id())
-	print(multiplayer.get_remote_sender_id())
 	if multiplayer.is_server():
 		print("server")
 	else:
 		print("client")
 	return
+
+func on_player_join(id):
+	print("player added:", id)
+	add_player_character(id)
+
+func on_player_leave(id):
+	print("player leave:", id)
+
 
 func get_sessions():
 	print("get_sessions")
@@ -37,16 +45,18 @@ func get_sessions():
 
 
 func spawn():
-	add_player_character(Global.steam_id)
 	return
 
 func add_player_character(id: int = 1):
 	print("add_player_character", id)
-	print(Global.players)
 	var character = player_scene.instantiate()
 	character.name = str(id)
-	add_child(character)
+	player_container.add_child(character)
 
+
+func remove_player_character(id: int = 1):
+	print("remove_player_character", id)
+	
 
 func update_session_browser(lobbies: Array):
 	print("update_session_browser")

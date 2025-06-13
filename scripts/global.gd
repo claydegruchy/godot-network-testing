@@ -17,8 +17,8 @@ var peer: SteamMultiplayerPeer = null
 signal name_update(new_name)
 var player_name: String = "Nameless":
 	set(n):
-		name_update.emit(n)
 		player_name = n
+		name_update.emit(n)
 
 
 # Names for remote players in id:name format.
@@ -30,29 +30,17 @@ var steam_id := -1
 
 
 # Signals to let lobby GUI know what's going on.
-signal player_list_changed()
+signal player_list_changed(added: int, removed: int)
+signal player_joined(id)
+signal player_left(id)
 signal connection_failed()
 signal connection_succeeded()
 signal socket_update_succeeded()
 signal socket_update_failed(what)
 signal game_error(what)
 
-# Game state signals to tell the rest of the mechanics whats happening
-signal networking_state_update(new_state)
-enum GameState {
-	STARTING,
-	IN_PROGRESS,
-	ENDING,
-	STOPPED,
-}
 
-var previous_networking_state: GameState
-var networking_state: GameState = GameState.STOPPED:
-	set(gs):
-		if (gs != previous_networking_state):
-			networking_state = gs
-			networking_state_update.emit(gs)
-
+var network_active := false
 
 func _process(_delta):
 	Steam.run_callbacks()
@@ -68,7 +56,7 @@ func _player_connected(id):
 # Callback from SceneTree.
 func _player_disconnected(id):
 	print("_player_disconnected")
-	if networking_state == GameState.IN_PROGRESS: # Game is in progress.
+	if network_active: # Game is in progress.
 		if multiplayer.is_server(): # If we are the host
 			game_error.emit("Player " + players[id] + " disconnected")
 			
@@ -105,13 +93,13 @@ func register_player(new_player_name):
 	print("register_player")
 	var id = multiplayer.get_remote_sender_id()
 	players[id] = new_player_name
-	player_list_changed.emit()
+	player_joined.emit(id)
 
-
+	
 func unregister_player(id):
 	print("unregister_player")
 	players.erase(id)
-	player_list_changed.emit()
+	player_left.emit(id)
 
 
 func create_lobby():
@@ -171,6 +159,7 @@ func begin_game():
 func end_game():
 	print("end_game")
 	players.clear()
+	network_active = false
 
 
 func _init():
@@ -198,8 +187,8 @@ func _ready():
 	await get_tree().process_frame # delay this call to the next frame as its async
 	var steam_username = Steam.getPersonaName()
 	if steam_username:
-		print("Set name to " + player_name)
 		player_name = steam_username
+		print("Set name to " + player_name)
 	steam_id = Steam.getSteamID()
 	
 
@@ -216,8 +205,8 @@ func _on_lobby_created(_connect: int, _lobby_id: int):
 
 
 func _on_lobby_joined(lobby: int, _permissions: int, _locked: bool, response: int):
-	print_debug("_on_lobby_joined")
-	print_stack()
+	print("_on_lobby_joined")
+
 	if response == 1:
 		var id = Steam.getLobbyOwner(lobby)
 		if id != steam_id:
@@ -267,6 +256,13 @@ func create_socket():
 	if error == OK:
 		multiplayer.set_multiplayer_peer(peer)
 		socket_update_succeeded.emit()
+		# register ourselves
+		var uid = multiplayer.get_unique_id()
+		network_active = true
+		
+		players[uid] = player_name
+		player_joined.emit(uid)
+
 	else:
 		socket_update_failed.emit(error)
 
@@ -279,6 +275,7 @@ func connect_socket(steam_id: int):
 	var error = peer.create_client(steam_id, 0)
 	if error == OK:
 		multiplayer.set_multiplayer_peer(peer)
+		network_active = true
 		socket_update_succeeded.emit()
 	else:
 		socket_update_failed.emit(error)

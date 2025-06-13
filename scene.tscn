@@ -12,6 +12,9 @@ metallic_texture = ExtResource("1_nxogm")
 script = ExtResource("1_3253y")
 player_scene = ExtResource("3_3253y")
 
+[node name="PlayerContainer" type="Node3D" parent="."]
+unique_name_in_owner = true
+
 [node name="Ground" type="CSGBox3D" parent="."]
 transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0.99408, -12.5137, 0)
 material_override = SubResource("StandardMaterial3D_3253y")
@@ -24,7 +27,7 @@ transform = Transform3D(1, 0, 0, 0, -0.844468, 0.535606, 0, -0.535606, -0.844468
 [node name="MultiplayerSpawner" type="MultiplayerSpawner" parent="."]
 unique_name_in_owner = true
 _spawnable_scenes = PackedStringArray("uid://blh6mudskpeig")
-spawn_path = NodePath("..")
+spawn_path = NodePath("../PlayerContainer")
 
 [node name="Control" type="Control" parent="."]
 layout_mode = 3
