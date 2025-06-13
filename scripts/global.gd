@@ -30,15 +30,18 @@ var steam_id := -1
 
 
 # Signals to let lobby GUI know what's going on.
-signal player_list_changed(added: int, removed: int)
 signal player_joined(id)
 signal player_left(id)
+
 signal connection_failed()
 signal connection_succeeded()
+
 signal socket_update_succeeded()
 signal socket_update_failed(what)
+
 signal game_error(what)
 
+signal server_disconnected()
 
 var network_active := false
 
@@ -60,7 +63,7 @@ func _player_disconnected(id):
 		if multiplayer.is_server(): # If we are the host
 			game_error.emit("Player " + players[id] + " disconnected")
 			
-			end_game()
+			end_networking()
 	else: # Game is not in progress.
 		# Unregister this player.
 		unregister_player(id)
@@ -77,7 +80,8 @@ func _connected_ok():
 func _server_disconnected():
 	print("_server_disconnected")
 	game_error.emit("Server disconnected")
-	end_game()
+	server_disconnected.emit()
+	end_networking()
 
 
 # Callback from SceneTree, only for clients (not server).
@@ -117,49 +121,11 @@ func get_player_list():
 	return players.values()
 
 
-func begin_game():
-	print("begin_game")
-	# assert(multiplayer.is_server())
-	# load_world.rpc()
-
-	# var world = get_tree().get_root().get_node("World")
-	var player_scene = load("res://player/player.tscn")
-
-	# # Create a dictionary with peer id and respective spawn points, could be improved by randomizing.
-	# var spawn_points = {}
-	# spawn_points[1] = 0 # Server in spawn point 0.
-	# var spawn_point_idx = 1
-	# for p in players:
-	# 	spawn_points[p] = spawn_point_idx
-	# 	spawn_point_idx += 1
-
-	# for p_id in spawn_points:
-	# 	var spawn_pos = world.get_node("SpawnPoints/" + str(spawn_points[p_id])).position
-	# 	var player = player_scene.instantiate()
-	# 	player.synced_position = spawn_pos
-	# 	player.name = str(p_id)
-	# 	player.set_player_name(player_name if p_id == multiplayer.get_unique_id() else players[p_id])
-	# 	world.get_node("Players").add_child(player)
-
-
-# @rpc("call_local")
-# func load_world():
-# 	print("load_world")
-# 	# Change scene.
-# 	var world = load("res://world.tscn").instantiate()
-# 	get_tree().get_root().add_child(world)
-# 	get_tree().get_root().get_node("Lobby").hide()
-
-# 	# Set up score.
-# 	world.get_node("Score").add_player(multiplayer.get_unique_id(), player_name)
-# 	for pn in players:
-# 		world.get_node("Score").add_player(pn, players[pn])
-# 	get_tree().set_pause(false) # Unpause and unleash the game!
-
-func end_game():
-	print("end_game")
+func end_networking():
+	print("end_networking")
 	players.clear()
 	network_active = false
+	multiplayer.peer = null
 
 
 func _init():
@@ -254,7 +220,7 @@ func create_socket():
 	#peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	var error = peer.create_host(0)
 	if error == OK:
-		multiplayer.set_multiplayer_peer(peer)
+		multiplayer.multiplayer_peer = peer
 		socket_update_succeeded.emit()
 		# register ourselves
 		var uid = multiplayer.get_unique_id()
@@ -274,7 +240,7 @@ func connect_socket(steam_id: int):
 	# peer.set_config(SteamPeerConfig.NETWORKING_CONFIG_SEND_BUFFER_SIZE, 524288)
 	var error = peer.create_client(steam_id, 0)
 	if error == OK:
-		multiplayer.set_multiplayer_peer(peer)
+		multiplayer.multiplayer_peer = peer
 		network_active = true
 		socket_update_succeeded.emit()
 	else:
