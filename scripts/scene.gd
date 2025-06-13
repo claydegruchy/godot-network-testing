@@ -12,7 +12,6 @@ extends Node3D
 
 func _ready():
 	Global.lobby_list_update.connect(update_session_browser)
-	Global.socket_update_succeeded.connect(_on_join_game)
 	Global.player_joined.connect(on_player_join)
 	Global.player_left.connect(on_player_leave)
 	Logger.initate_logger(log_container)
@@ -22,30 +21,13 @@ func _on_host_pressed():
 	Global.create_lobby()
 
 
-func _on_join_game():
-	if multiplayer.is_server():
-		print("server")
-	else:
-		print("client")
-	return
-
 func on_player_join(id):
 	print("player added:", id)
-	if (multiplayer.is_server()):
+	if (multiplayer.is_server()): # other players will get the update via the multiplayerspawner
 		add_player_character(id)
 
 func on_player_leave(id):
 	print("player leave:", id)
-
-
-func get_sessions():
-	print("get_sessions")
-	Global.get_lobby_list()
-	lobby_status_display.text = "Searching for sessions..."
-
-
-func spawn():
-	return
 
 func add_player_character(id: int = 1):
 	print("add_player_character", id)
@@ -53,10 +35,15 @@ func add_player_character(id: int = 1):
 	character.name = str(id)
 	player_container.add_child(character)
 
-
 func remove_player_character(id: int = 1):
 	print("remove_player_character", id)
-	
+
+
+func get_sessions():
+	print("get_sessions")
+	Global.get_lobby_list()
+	lobby_status_display.text = "Searching for sessions..."
+
 
 func update_session_browser(lobbies: Array):
 	print("update_session_browser")
