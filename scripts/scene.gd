@@ -16,7 +16,6 @@ func _ready():
 	Global.player_joined.connect(on_player_join)
 	Global.player_left.connect(on_player_leave)
 	Logger.initate_logger(log_container)
-	Logger.log("lmao")
 	pass
 
 func _on_host_pressed():
@@ -33,7 +32,7 @@ func _on_join_game():
 func on_player_join(id):
 	print("player added:", id)
 	if (multiplayer.is_server()):
-	add_player_character(id)
+		add_player_character(id)
 
 func on_player_leave(id):
 	print("player leave:", id)
