@@ -32,6 +32,7 @@ func _on_join_game():
 
 func on_player_join(id):
 	print("player added:", id)
+	if (multiplayer.is_server()):
 	add_player_character(id)
 
 func on_player_leave(id):
