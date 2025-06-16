@@ -161,7 +161,22 @@ func _ready():
 		player_name = steam_username
 		print("Set name to " + player_name)
 	steam_id = Steam.getSteamID()
+	check_command_line()
 
+
+func check_command_line() -> void:
+	var these_arguments: Array = OS.get_cmdline_args()
+
+	# There are arguments to process
+	if these_arguments.size() > 0:
+			# A Steam connection argument exists
+			if these_arguments[0] == "+connect_lobby":
+					# Lobby invite exists so try to connect to it
+					if int(these_arguments[1]) > 0:
+							# At this point, you'll probably want to change scenes
+							# Something 好 a loading into lobby screen
+							print("Command line lobby ID: %s" % these_arguments[1])
+							join_lobby(int(these_arguments[1]))
 
 	# utilities for testing
 	var args = OS.get_cmdline_args()
@@ -181,9 +196,9 @@ func _ready():
 
 	
 func _on_lobby_created(_connect: int, _lobby_id: int):
-	print_debug("_on_lobby_created", _connect)
+	print_debug("_on_lobby_created", _connect, ",", _lobby_id)
 	if _connect == 1:
-		print("Create lobby id:", str(lobby_id))
+		print("Create lobby id:", str(_lobby_id))
 		lobby_id = _lobby_id
 		Steam.setLobbyData(_lobby_id, "name", DEFAULT_SERVER_NAME)
 		create_socket()
