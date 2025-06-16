@@ -20,6 +20,10 @@ config/icon="res://icon.svg"
 Logger="*res://scripts/logger.gd"
 Network="*res://scripts/network.gd"
 
+[editor]
+
+run/main_run_args="+connect_lobby 109775240932000615"
+
 [input]
 
 Forward={

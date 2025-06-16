@@ -165,21 +165,22 @@ func _ready():
 
 
 func check_command_line() -> void:
-	var these_arguments: Array = OS.get_cmdline_args()
+	var args: Array = OS.get_cmdline_args()
+	print("check_command_line", args)
 
 	# There are arguments to process
-	if these_arguments.size() > 0:
+	if args.size() > 0:
 			# A Steam connection argument exists
-			if these_arguments[0] == "+connect_lobby":
+			var cl = args.find("+connect_lobby")
+			if cl > -1:
 					# Lobby invite exists so try to connect to it
-					if int(these_arguments[1]) > 0:
+					if int(args[cl + 1]) > 0:
 							# At this point, you'll probably want to change scenes
 							# Something 好 a loading into lobby screen
-							print("Command line lobby ID: %s" % these_arguments[1])
-							join_lobby(int(these_arguments[1]))
+							print("Command line lobby ID: %s" % args[cl + 1])
+							join_lobby(int(args[cl + 1]))
 
 	# utilities for testing
-	var args = OS.get_cmdline_args()
 
 	if args.has("--autojoin"):
 		var quick_join = func(l):
