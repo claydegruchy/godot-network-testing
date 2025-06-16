@@ -11,14 +11,14 @@ extends Node3D
 
 
 func _ready():
-	Global.lobby_list_update.connect(update_session_browser)
-	Global.player_joined.connect(on_player_join)
-	Global.player_left.connect(on_player_leave)
+	Network.lobby_list_update.connect(update_session_browser)
+	Network.player_joined.connect(on_player_join)
+	Network.player_left.connect(on_player_leave)
 	Logger.initate_logger(log_container)
 	pass
 
 func _on_host_pressed():
-	Global.create_lobby()
+	Network.create_lobby()
 
 
 func on_player_join(id):
@@ -41,7 +41,7 @@ func remove_player_character(id: int = 1):
 
 func get_sessions():
 	print("get_sessions")
-	Global.get_lobby_list()
+	Network.get_lobby_list()
 	lobby_status_display.text = "Searching for sessions..."
 
 
@@ -57,7 +57,7 @@ func update_session_browser(lobbies: Array):
 	for lobby in lobbies:
 		var b = Button.new()
 		b.text = lobby[0] + " - (" + str(lobby[2]) + ")"
-		b.pressed.connect(Global.join_lobby.bind(lobby[1]))
+		b.pressed.connect(Network.join_lobby.bind(lobby[1]))
 		b.pressed.connect(func(): print(lobby))
 		sessions_browser.add_child(b)
 	return
